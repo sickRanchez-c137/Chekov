@@ -90,7 +90,7 @@ class Chekov:
 			self.process()
 		else:
 			if os.path.exists(self.model_name):
-				pass
+				self.process()
 			else:
 				print(f"I: .. Could not find specified model. Training again")
 				self.model_name=""
@@ -100,21 +100,23 @@ class Chekov:
 	def write_story(self,output_length = 10000):
 		
 		my_start = input("Please Enter Some text as paragraph that will start the story.\n")
-		sentence = ('{0:0>' + str(self.input_seq_length) + '}').format(my_start).lower()
+		print(f"I: .. you entered string of length {len(my_start)}")
+		sentence = my_start.rjust(self.input_seq_length)[:self.input_seq_length].lower()
+		print(f"I: .. string made of length {len(sentence)}")
 
 		generated_text = ""
 		# convert the characters to their index
-		sentence_int = np.asarray([char_index[my_char] for my_char in sentence])
+		sentence_int = np.asarray([self.char_index[my_char] for my_char in sentence])
 
 		for i in range(output_length):
 			x =  np.reshape(sentence_int,(1,self.input_seq_length,1))
 			x = x/float(self.n_vocab)
 
-			preds = model.predict(x,verbose=0)
+			preds = self.model.predict(x,verbose=0)
 			index = np.argmax(preds)
-			result = index_char[index]
+			result = self.index_char[index]
 			generated_text+=result
-			sentence_int.append(index)
+			sentence_int = np.append(sentence_int,index)
 			sentence_int = sentence_int[1:]
 
 		output_file = "chekov_gen.txt"
