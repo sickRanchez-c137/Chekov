@@ -35,14 +35,14 @@ class Chekov:
 		# list of unique chars in the file
 		self.chars = sorted(list(set(self.my_text_corpus)))
 		self.n_vocab = len(self.chars)
-		print(f"Ï: .. Unique Characters are {self.n_vocab}")
+		print(f"Ã: .. Unique Characters are {self.n_vocab}")
 		print(self.chars)
 
 		# create a dict to get index of each char 
 		self.char_index = dict((c,i) for i,c in enumerate(self.chars))
 		self.index_char = dict((i,c) for i,c in enumerate(self.chars))
 
-	def prepare_data(self,input_seq_length = 100):
+	def prepare_data(self,input_seq_length = 40):
 		self.in_sequences = []
 		self.outputs = []
 		self.input_seq_length = input_seq_length
@@ -64,9 +64,11 @@ class Chekov:
 	def create_model(self):
 		self.model = Sequential()
 		self.model.add(LSTM(256,input_shape=(self.in_sequences.shape[1],self.in_sequences.shape[2]),return_sequences=True))
-		self.model.add(Dropout(0.2))
+		self.model.add(Dropout(0.4))
+		self.model.add(LSTM(256,return_sequences=True))
+		self.model.add(Dropout(0.4))
 		self.model.add(LSTM(256))
-		self.model.add(Dropout(0.2))
+		self.model.add(Dropout(0.4))
 		self.model.add(Dense(self.outputs.shape[1],activation='softmax'))
 
 		if self.model_name=="":
@@ -74,14 +76,14 @@ class Chekov:
 			check_point_save_file = "weight_improvement-{epoch:02d}-{loss:.4f}.hdf5"
 			checkpoint = ModelCheckpoint(check_point_save_file,monitor='loss',verbose=1,save_best_only=True,mode='min')
 			callbacks_list=[checkpoint]
-			self.model.fit(self.in_sequences,self.outputs,epochs=20,batch_size=128,callbacks=callbacks_list)
+			self.model.fit(self.in_sequences,self.outputs,epochs=100,batch_size=128,callbacks=callbacks_list)
 		else:
 			self.model.load_weights(self.model_name)
 			self.model.compile(loss='categorical_crossentropy',optimizer='adam')		
 
 	def process(self):
 		in_folder_name = 'my_stories'
-		num_stories_to_learn = 1
+		num_stories_to_learn = 150
 		self.process_file_text(in_folder_name,num_stories_to_learn)
 		self.prepare_data()
 
@@ -96,15 +98,23 @@ class Chekov:
 				self.model_name=""
 				self.process()
 		self.create_model()
+		self.write_story()
 
 	def write_story(self,output_length = 10000):
 		
-		my_start = input("Please Enter Some text as paragraph that will start the story.\n")
+		user_input = False
+		my_start = ""
+		if user_input:
+			my_start = input("Please Enter Some text as paragraph that will start the story.\n")
+		else:
+			my_start = "The couple was not happy together."
+
 		print(f"I: .. you entered string of length {len(my_start)}")
 		sentence = my_start.rjust(self.input_seq_length)[:self.input_seq_length].lower()
 		print(f"I: .. string made of length {len(sentence)}")
 
 		generated_text = ""
+		generated_text+=my_start
 		# convert the characters to their index
 		sentence_int = np.asarray([self.char_index[my_char] for my_char in sentence])
 
@@ -122,7 +132,7 @@ class Chekov:
 		output_file = "chekov_gen.txt"
 		print(f"I: .. writing to output file {output_file}")
 		with open(output_file,'wb') as o_file:
-			outfile.write(generated_text.encode('ascii','ignore'))
+			o_file.write(generated_text.encode('ascii','ignore'))
 		print(f"I: .. output file write completed")
 
 my_obj = Chekov()
